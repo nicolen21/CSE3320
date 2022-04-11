@@ -106,7 +106,12 @@ void closeFile(char* filename) //5 points
 /*
   This command shall print out 
   information about the file system in 
-  both hexadecimal and base 10
+  both hexadecimal and base 10:
+  -BPB_BytesPerSec  
+  -BPB_SecPerClus  
+  -BPB_RsvdSecCnt 
+  -BPB_NumFATS 
+  -BPB_FATSz32 
 */
 void fileInfo() //10 points
 {
