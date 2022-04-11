@@ -63,8 +63,15 @@ struct DirectoryEntry
 };
 struct DirectoryEntry dir[16];
 
-//opening file
-void openFile(char* filename) 
+/*
+This command shall open a fat32 image.  Filenames of fat32 images 
+shall not contain spaces and shall be limited to 100 characters. 
+If the file is not found your program shall output: 
+“Error: File system image not found.”.  
+If a file system is already opened then your program shall output: 
+“Error: File system image already open.”. 
+*/
+void openFile(char* filename) //5 points
 {
   // opening file
   f = fopen(filename, 'r');
@@ -74,38 +81,105 @@ void openFile(char* filename)
     //if file is open, get all BPB variables and then calculate the 
     //root dir location
   }
-  else if(//file is already open)
+  else if(/*file is already open*/)
   {
-    printf("");
+    printf("Error: File system image already open.\n");
   }
   else
   {
-    printf("Error: File system image not found\n");
+    printf("Error: File system image not found.\n");
   }
 }
 
-void closeFile(char* filename) 
+/*
+  This command shall close the fat32 image.  If the file system 
+  is not currently open your program shall output: 
+  “Error: File system not open.”  
+  Any command issued after a close, except for 
+  open, shall result in “Error: File system image must be opened first.” 
+*/
+void closeFile(char* filename) //5 points
 {
   //if open (1), fclose file, set open var to 0
 }
 
-/*This command shall print out 
-information about the file system in 
-both hexadecimal and base 10
+/*
+  This command shall print out 
+  information about the file system in 
+  both hexadecimal and base 10
 */
-void fileInfo() 
+void fileInfo() //10 points
 {
   //if open, print info
   //else print that no file is open
 }
 
-/*This command shall print the attributes and 
+/*
+  This command shall print the attributes and 
   starting cluster number of the file or directory name.  
   If the parameter is a directory name then the size shall be 0. 
   If the file or directory does not exist 
   then your program shall output “Error: File not found”.
 */
-void fileStat()
+void fileStat() //10 points
+{
+
+}
+
+/*
+  This command shall retrieve the file from the FAT 32 
+  image and place it in your current working directory.
+  If the file or directory does not exist then your program 
+  shall output “Error: File not found”. 
+*/
+void getFile() //15 points
+{
+
+}
+
+/*
+    This command shall change the current working directory 
+    to the given directory. Your program shall support relative 
+    paths, e.g cd ../name and absolute paths. 
+*/
+void changeDir() //10 points
+{
+
+}
+
+/*
+  Lists the directory contents.  
+  Your program shall support listing “.” and “..” .  
+  Your program shall not list deleted files or system 
+  volume names. 
+*/
+void listDir() //10 points
+{
+
+}
+
+/*
+  Reads from the given file at the position, in bytes, 
+  specified by the position parameter and output 
+  the number of bytes specified. 
+*/
+void readFile() //10 points
+{
+
+}
+
+/*
+  Deletes the file from the file system 
+*/
+void deleteFile() //10 points
+{
+
+}
+
+/*
+  Un-deletes the file from the file system 
+*/
+void restoreFile() //10 points
 {
 
 }
