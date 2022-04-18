@@ -145,11 +145,44 @@ void getFile() //15 points
 /*
     This command shall change the current working directory 
     to the given directory. Your program shall support relative 
-    paths, e.g cd ../name and absolute paths. 
+    paths, e.g cd ../name and absolute paths. (HE SAID ABSOLUTE PATH 
+    DOESN'T NEED TO BE DONE IN CLASS)
 */
 void changeDir() //10 points
 {
+    /* FOR RELATIVE
+      char * directory;
+      directory = strtok(token[i],"/");
 
+      [insert cd without relative code here]
+
+      while(directory = strtok(NULL,"/"))
+      {
+        lookup for cluster (IF CLUSTER == 0, SET CLUSTER = 2)
+        convert offset
+        read dir
+        (DONT NEED TO BREAK)
+      }
+    */
+
+    /* HELPFUL CODE
+      int last_offset = 0x1001100;
+      offset = last_offset;
+    */
+
+    /*PSEUDOCODE-ISH THAT WAS WRITTEN IN CLASS FOR CD
+      for(i = 0; i < 16; i++)
+      {
+        if(compare(token[i], dir[i].DIRxxx)) //couldn't read where the xxx's are
+        {
+          int cluster = dir[i].clusterLow;
+          int offset = LBktoOFfset(cluster);
+          fseek(fp,offset,SEEKSET);
+          fseek(dir[0],sizeof(DP),11,fp);
+        }
+        break;
+      }
+    */
 }
 
 /*
@@ -236,15 +269,11 @@ int main()
 
     // Now print the tokenized input as a debug check
     // \TODO Remove this code and replace with your FAT32 functionality
-
-    int token_index  = 0;
-    for( token_index = 0; token_index < token_count; token_index ++ ) 
+    if(strcmp(token[0],"cd") == 0)
     {
-      printf("token[%d] = %s\n", token_index, token[token_index] );  
+      changeDir();
     }
-
-    free( working_root );
-
+    //add more strcmp for each one here and execute functions
   }
   return 0;
 }
