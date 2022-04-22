@@ -71,17 +71,19 @@ If the file is not found your program shall output:
 If a file system is already opened then your program shall output: 
 “Error: File system image already open.”. 
 */
-void openFile(char* filename) //5 points
+void openFile(char* fn) //5 points
 {
   // opening file
-  f = fopen(filename, 'r');
+  file = fopen(fn, 'r');
 
-  if(f != NULL)
+  if(file != NULL)
   {
-    //if file is open, get all BPB variables and then calculate the 
-    //root dir location
+    fileOpen = 1; //set to 1 to indicate that the file is opened
+
+    //insert file reading here
+
   }
-  else if(/*file is already open*/)
+  else if(fileOpen = 1)
   {
     printf("Error: File system image already open.\n");
   }
@@ -98,9 +100,17 @@ void openFile(char* filename) //5 points
   Any command issued after a close, except for 
   open, shall result in “Error: File system image must be opened first.” 
 */
-void closeFile(char* filename) //5 points
+void closeFile() //5 points
 {
-  //if open (1), fclose file, set open var to 0
+  if(fileOpen)
+  {
+    fclose(file);
+    fileOpen = 0;
+  }
+  else
+  {
+    printf("Error: File system not open.");
+  }
 }
 
 /*
@@ -117,6 +127,14 @@ void fileInfo() //10 points
 {
   //if open, print info
   //else print that no file is open
+  if(fileOpen)
+  {
+    //code
+  }
+  else
+  {
+    printf("Error: File system image must be opened first.");
+  }
 }
 
 /*
@@ -128,7 +146,14 @@ void fileInfo() //10 points
 */
 void fileStat() //10 points
 {
-
+  if(fileOpen)
+  {
+    //code
+  }
+  else
+  {
+    printf("Error: File system image must be opened first.");
+  }
 }
 
 /*
@@ -139,7 +164,14 @@ void fileStat() //10 points
 */
 void getFile() //15 points
 {
-
+  if(fileOpen)
+  {
+    //code
+  }
+  else
+  {
+    printf("Error: File system image must be opened first.");
+  }
 }
 
 /*
@@ -150,6 +182,8 @@ void getFile() //15 points
 */
 void changeDir() //10 points
 {
+  if(fileOpen)
+  {
     /* FOR RELATIVE
       char * directory;
       directory = strtok(token[i],"/");
@@ -176,13 +210,18 @@ void changeDir() //10 points
         if(compare(token[i], dir[i].DIRxxx)) //couldn't read where the xxx's are
         {
           int cluster = dir[i].clusterLow;
-          int offset = LBktoOFfset(cluster);
+          int offset = LBktoOffset(cluster);
           fseek(fp,offset,SEEKSET);
           fseek(dir[0],sizeof(DP),11,fp);
         }
         break;
       }
     */
+  }
+  else
+  {
+    printf("Error: File system image must be opened first.");
+  }
 }
 
 /*
@@ -193,7 +232,14 @@ void changeDir() //10 points
 */
 void listDir() //10 points
 {
-
+  if(fileOpen)
+  {
+    //code
+  }
+  else
+  {
+    printf("Error: File system image must be opened first.");
+  }
 }
 
 /*
@@ -203,7 +249,14 @@ void listDir() //10 points
 */
 void readFile() //10 points
 {
-
+  if(fileOpen)
+  {
+    //code
+  }
+  else
+  {
+    printf("Error: File system image must be opened first.");
+  }
 }
 
 /*
@@ -211,7 +264,15 @@ void readFile() //10 points
 */
 void deleteFile() //10 points
 {
-
+  //make sure to set fileOpen = 0 after deletion
+  if(fileOpen)
+  {
+    //code
+  }
+  else
+  {
+    printf("Error: File system image must be opened first.");
+  }
 }
 
 /*
@@ -226,6 +287,8 @@ int main()
 {
 
   char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
+
+  int fileOpen = 0; //if 1, file is open; if 0, file is closed
 
   while( 1 )
   {
@@ -267,13 +330,70 @@ int main()
         token_count++;
     }
 
-    // Now print the tokenized input as a debug check
-    // \TODO Remove this code and replace with your FAT32 functionality
-    if(strcmp(token[0],"cd") == 0)
+    // --------------------------- COMMANDS ---------------------------
+
+
+    if(token[0] == NULL)
     {
-      changeDir();
+      continue;
     }
-    //add more strcmp for each one here and execute functions
+
+    if(strcmp(token[0], "exit") == 0 || strcmp(token[0], "quit") == 0 )
+    {
+      return 0;
+    }
+
+    if(strcmp(token[0], "open") == 0)
+    {
+      fileOpen(args[0]);
+      continue;
+    }
+
+    if(strcmp(token[0], "close") == 0)
+    {
+      closeFile();
+    }
+
+    if(strcmp(token[0], "info") == 0)
+    {
+      //fileInfo();
+    }
+
+    if(strcmp(token[0], "stat"))
+    {
+      //fileStat();
+    }
+
+    if(strcmp(token[0], "get") == 0)
+    {
+      //getFile();
+    }
+
+    if(strcmp(token[0], "cd") == 0)
+    {
+      //changeDir();
+    }
+
+    if(strcmp(token[0], "ls") == 0)
+    {
+      //listDir();
+    }
+
+    if(strcmp(token[0], "read") == 0)
+    {
+      //readFile();
+    }
+
+    if(strcmp(token[0], "del") == 0)
+    {
+      //deleteFile();
+    }
+
+    if(strcmp(token[0], "undel") == 0)
+    {
+      //restoreFile();
+    }
+
   }
   return 0;
 }
