@@ -495,7 +495,10 @@ void deleteFile() //10 points
    //else print that no file is open
    if(fileOpen)
    {
-      //code
+      /*remove(argv[0]);
+        if remove(arg) == 0, then print out delete successfully
+        else print didn't remove successfully
+      */
    }
    else
    {
