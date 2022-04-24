@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
+#include <ctype.h>
 
 #define MAX_NUM_ARGUMENTS 3
 
@@ -50,6 +51,7 @@ int16_t BPB_RootEntCnt;
 char BS_VolLab[11];
 int32_t BPB_FATSz32;
 int32_t BPB_RootClus;
+int8_t BPB_NumFATS;
 
 // given in class
 struct DirectoryEntry
@@ -64,9 +66,44 @@ struct DirectoryEntry
 };
 struct DirectoryEntry dir[16];
 
-//global variables
+// global variables
 int fileOpen; //if 1, file is open; if 0, file is closed
 FILE *fp; //file pointer to fat32 image
+
+// compareFilename converts the given filename to an expanded filename and check whether they are equal
+//   returns 1 if equal, 0 if not equal
+// compare.c function from class GitHub
+// - converts foo.txt to FOO     TXT
+int compareFilename(char *fn, char *img_name)
+{
+   // reserve 12 bits for filename (11 for filename + 1 for null terminator)
+   char expanded_name[12];
+   memset(expanded_name, ' ', 12);
+
+   char *token=strtok(fn, ".");
+   strncpy(expanded_name, token, strlen(token));
+
+   token=strtok(NULL, ".");
+
+   if(token)
+   {
+      strncpy((char*)(expanded_name+8), token, strlen(token));
+   }
+
+   expanded_name[11]='\0';
+
+   for(int i=0; i<11; i++)
+   {
+      expanded_name[i]=toupper(expanded_name[i]);
+   }
+
+   if(strncmp(expanded_name, img_name, 11) ==0)
+   {
+      return 1;
+   }
+
+   return 0;
+}
 
 
 /*
@@ -82,25 +119,6 @@ void openFile(char* fn) //5 points
    //open file for fn: filename in read mode
    fp = fopen(fn, "r");
 
-   // //file is not already opened and can be opened successfully
-   // if(fp != NULL)
-   // {
-   //    fileOpen=1;
-   //    printf("File opened successfully\n");
-   // }
-   //
-   // //check if the file is already open
-   // else if(fileOpen == 1)
-   // {
-   //    printf("Error: File system image already open.\n");
-   //    return;
-   // }
-   //
-   // else
-   // {
-   //    printf("Error: File system image not found.\n");
-   // }
-
    //check if the file is already open
    if(fileOpen == 1)
    {
@@ -113,7 +131,6 @@ void openFile(char* fn) //5 points
       if(fp != NULL)
       {
          fileOpen=1;
-         printf("File opened successfully\n");
       }
       else
       {
@@ -135,13 +152,12 @@ void closeFile() //5 points
 {
    if(fileOpen)
    {
-      printf("Closing file...\n");
       fclose(fp);
       fileOpen=0;
    }
    else
    {
-      printf("Error: File system not open.");
+      printf("Error: File system not open.\n");
    }
 }
 //still need to add "Error: File system image must be opened first" part
@@ -159,41 +175,41 @@ both hexadecimal and base 10:
 */
 void fileInfo() //10 points
 {
-   int16_t BPB_BytesPerSec;
-   int16_t BPB_SecPerClus;
-   int16_t BPB_RsvdSecCnt;
-   int16_t BPB_NumFATS;
-   int16_t BPB_FATSz32;
+   // int16_t BPB_BytesPerSec;
+   // int8_t BPB_SecPerClus;
+   // int16_t BPB_RsvdSecCnt;
+   // int8_t BPB_NumFATS;
+   // int32_t BPB_FATSz32;
+
    //if open, print info
    //else print that no file is open
    if(fileOpen)
    {
-    //code
-    //get BytesPerSec which starts at 11, size of 2
-    fseek(fp, 11, SEEK_SET);
-    fread(&BPB_BytesPerSec, 2, 1, fp);
-    printf("BPB_BytesPerSec: %d\n", BPB_BytesPerSec);
+      //code
+      //get BytesPerSec which starts at 11, size of 2
+      fseek(fp, 11, SEEK_SET);
+      fread(&BPB_BytesPerSec, 2, 1, fp);
+      printf("BPB_BytesPerSec: %d\n", BPB_BytesPerSec);
 
-    //get BPB_SecPerClus which starts at 13, size of 1
-    fseek(fp, 13, SEEK_SET);
-    fread(&BPB_SecPerClus, 1, 1, fp);
-    printf("BPB_SecPerClus: %d\n", BPB_SecPerClus);
+      //get BPB_SecPerClus which starts at 13, size of 1
+      fseek(fp, 13, SEEK_SET);
+      fread(&BPB_SecPerClus, 1, 1, fp);
+      printf("BPB_SecPerClus: %d\n", BPB_SecPerClus);
 
-    //get BPB_RsvdSecCnt which starts at 14, size of 2
-    fseek(fp, 14, SEEK_SET);
-    fread(&BPB_RsvdSecCnt, 2, 1, fp);
-    printf("BPB_RsvdSecCnt: %d\n", BPB_RsvdSecCnt);
+      //get BPB_RsvdSecCnt which starts at 14, size of 2
+      fseek(fp, 14, SEEK_SET);
+      fread(&BPB_RsvdSecCnt, 2, 1, fp);
+      printf("BPB_RsvdSecCnt: %d\n", BPB_RsvdSecCnt);
 
-    //get BPB_NumFATS which starts at 16, size of 1
-    fseek(fp, 16, SEEK_SET);
-    fread(&BPB_NumFATS, 1, 1, fp);
-    printf("BPB_NumFATS: %d\n", BPB_NumFATS);
+      //get BPB_NumFATS which starts at 16, size of 1
+      fseek(fp, 16, SEEK_SET);
+      fread(&BPB_NumFATS, 1, 1, fp);
+      printf("BPB_NumFATS: %d\n", BPB_NumFATS);
 
-    //get BPB_FATSz32 which starts at 22, size of 2
-    fseek(fp, 22, SEEK_SET);
-    fread(&BPB_FATSz32, 2, 1, fp);
-    printf("BPB_FATSz32: %d\n", BPB_FATSz32);
-    // ^^^ check to make sure thats the right size
+      //get BPB_FATSz32 which starts at 36, size of 4
+      fseek(fp, 36, SEEK_SET);
+      fread(&BPB_FATSz32, 4, 1, fp);
+      printf("BPB_FATSz32: %d\n", BPB_FATSz32);
    }
    else
    {
@@ -215,7 +231,7 @@ void fileStat() //10 points
    //else print that no file is open
    if(fileOpen)
    {
-    //code
+      //code
    }
    else
    {
@@ -230,17 +246,57 @@ image and place it in your current working directory.
 If the file or directory does not exist then your program
 shall output “Error: File not found”.
 */
-void getFile() //15 points
+void getFile(char *fn) //15 points
 {
    //if open, print info
    //else print that no file is open
    if(fileOpen)
    {
-    //code
+      //code
+      // PSUEDO CODE FROM 4/13 ECHO
+      // same ish for read
+      // - search directory for where the given file starts
+      // - save low cluster number
+      // - save file size -> know how to get to file
+
+      //1. look up Directory
+      //2. compare filenames
+      //3. get cluster number
+      //4. calculate offset
+      //5. fseek to that offset
+      //6. read/write loop over until copied whole file
+
+      // int offset=LBAtoOffset(clusterNumber);
+      // fseek(fp, offset, SEEK_SET);
+      // outputfp = fopen(token[1], "w");
+      // uint8_t buffer[512];
+      //
+      // while(size > BPB_BytesPerSec)
+      // {
+      //    fread(buffer, 512, 1, fp);
+      //    write(buffer, 512, 1, outputfp);
+      //    size=size-BPB_BytesPerSec;
+      //
+      //    //need new offset
+      //    cluster=NextLB(cluster);
+      //    if(cluster > -1)
+      //    {
+      //       offset=LBAtoOffset(cluster);
+      //       fseek(fp, offset, SEEK_SET);
+      //    }
+      //
+      //    if(size>0) //have leftover -> external fragmentation
+      //    {
+      //       fread(buffer, size, 1, fp);
+      //       write(buffer, size, 1, outputfp);
+      //    }
+      // }
+      //
+      // fclose(outputfp);
    }
    else
    {
-      printf("Error: File system image must be opened first.");
+      printf("Error: File system image must be opened first.\n");
    }
 }
 
@@ -256,7 +312,7 @@ void changeDir() //10 points
    //else print that no file is open
    if(fileOpen)
    {
-    //code
+      //code
    }
    else
    {
@@ -277,11 +333,30 @@ void listDir() //10 points
    //else print that no file is open
    if(fileOpen)
    {
-    //code
+      //code
+      // - read the directory data
+      fseek(fp, 0x100400, SEEK_SET);
+      // - read at beginning of directory
+      fread( &dir[0], sizeof(struct DirectoryEntry), 16, fp);
+
+      for(int i=0; i<16; i++)
+      {
+         // - check if file is read only (0x01), subdirectory (0x10), or archive flag (0x20)
+         // - check that its also not a deleted file (0xe5)
+         if((dir[i].DIR_Attr == 0x01 || dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20)
+            && dir[i].DIR_Name[0] != 0xe5)
+         {
+            //reserve 12 characters for file name (11 bits plus 1 null)
+            char name[12];
+            memcpy(name, dir[i].DIR_Name, 11);
+            name[11]='\0';
+            printf("%s\n", name);
+         }
+      }
    }
    else
    {
-      printf("Error: File system image must be opened first.");
+      printf("Error: File system image must be opened first.\n");
    }
 }
 
@@ -297,11 +372,21 @@ void readFile() //10 points
    //else print that no file is open
    if(fileOpen)
    {
-    //code
+      //code
+      // ------ not right yet -----------------------------------
+      // fseek to location where directory starts
+      // read the directory data
+      // fseek(fp, 0x100400, SEEK_SET);
+      // // at beginning of directory
+      // fread( &dir[0], sizeof(struct DirectoryEntry), 16, fp);
+      // for(int i =0; i<16; i++)
+      // {
+      //    printf("Filename: %s\n", dir[i].DIR_Name);
+      // }
    }
    else
    {
-      printf("Error: File system image must be opened first.");
+      printf("Error: File system image must be opened first.\n");
    }
 }
 
@@ -315,7 +400,7 @@ void deleteFile() //10 points
    //else print that no file is open
    if(fileOpen)
    {
-    //code
+      //code
    }
    else
    {
@@ -384,11 +469,11 @@ int main()
       // Now print the tokenized input as a debug check
       // \TODO Remove this code and replace with your FAT32 functionality
 
-      int token_index  = 0;
-      for( token_index = 0; token_index < token_count; token_index ++ )
-      {
-         printf("token[%d] = %s\n", token_index, token[token_index] );
-      }
+      // int token_index  = 0;
+      // for( token_index = 0; token_index < token_count; token_index ++ )
+      // {
+      //    printf("token[%d] = %s\n", token_index, token[token_index] );
+      // }
       // ----------------------------------------------------------------------
 
 
@@ -409,8 +494,7 @@ int main()
 
       if(strcmp(token[0], "open") == 0)
       {
-         printf("Calling openFile function...\n");
-         //pass in filename (token[1]/argv[1]) to openFile function
+         // pass in filename parameter (token[1])
          openFile(token[1]);
          continue;
       }
@@ -427,37 +511,38 @@ int main()
 
       if(strcmp(token[0], "stat"))
       {
-       //fileStat();
+         //fileStat();
       }
 
       if(strcmp(token[0], "get") == 0)
       {
-       //getFile();
+         // pass in filename parameter (token[1])
+         // getFile(token[1]);
       }
 
       if(strcmp(token[0], "cd") == 0)
       {
-       //changeDir();
+         //changeDir();
       }
 
       if(strcmp(token[0], "ls") == 0)
       {
-       //listDir();
+         listDir();
       }
 
       if(strcmp(token[0], "read") == 0)
       {
-       //readFile();
+         //readFile();
       }
 
       if(strcmp(token[0], "del") == 0)
       {
-       //deleteFile();
+         //deleteFile();
       }
 
       if(strcmp(token[0], "undel") == 0)
       {
-       //restoreFile();
+         //restoreFile();
       }
 
 
