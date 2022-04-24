@@ -218,7 +218,6 @@ void fileInfo() //10 points
    //if open, print info
    if(fileOpen)
    {
-      //code
       //get BytesPerSec which starts at 11, size of 2
       fseek(fp, 11, SEEK_SET);
       fread(&BPB_BytesPerSec, 2, 1, fp);
@@ -260,17 +259,38 @@ If the parameter is a directory name then the size shall be 0.
 If the file or directory does not exist
 then your program shall output “Error: File not found”.
 */
-void fileStat() //10 points
+void fileStat(char *fn) //10 points
 {
-   //if open, print info
-   //else print that no file is open
+   //if open, print stat
    if(fileOpen)
    {
-      //code
+      // check if filename was given
+      if(fn == 0)
+      {
+         printf("Error: Missing parameter.\n");
+         return;
+      }
+
+      // - look up directory and compare filename for match
+      int index=compareFilename(fn);
+
+      // if no match was found
+      if(index==-1)
+      {
+         printf("Error: File not found.\n");
+         return;
+      }
+
+      printf("File Size: \t\t%d\n", dir[index].DIR_FileSize);
+      printf("First Cluster Low: \t%d\n", dir[index].DIR_FirstClusterLow);
+      printf("DIR_ATTR: \t\t%d\n", dir[index].DIR_Attr);
+      printf("First Cluster High: \t%d\n", dir[index].DIR_FirstClusterHigh);
    }
+
+   //else print that no file is open
    else
    {
-      printf("Error: File system image must be opened first.");
+      printf("Error: File system image must be opened first.\n");
    }
 }
 
@@ -286,6 +306,13 @@ void getFile(char *fn) //15 points
    //if open, get file
    if(fileOpen)
    {
+      //check if filename was given
+      if(fn == 0)
+      {
+         printf("Error: Missing parameter.\n");
+         return;
+      }
+
       // - look up directory and compare filename for match
       int index=compareFilename(fn);
 
@@ -556,9 +583,10 @@ int main()
          fileInfo();
       }
 
-      if(strcmp(token[0], "stat"))
+      if(strcmp(token[0], "stat")==0)
       {
-         //fileStat();
+         // pass in filename parameter (token[1])
+         fileStat(token[1]);
       }
 
       if(strcmp(token[0], "get") == 0)
