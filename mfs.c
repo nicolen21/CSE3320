@@ -70,11 +70,13 @@ struct DirectoryEntry dir[16];
 int fileOpen; //if 1, file is open; if 0, file is closed
 FILE *fp; //file pointer to fat32 image
 
-// compareFilename converts the given filename to an expanded filename and check whether they are equal
-//   returns 1 if equal, 0 if not equal
-// compare.c function from class GitHub
+
+// compareFilename converts the given filename to an expanded filename,
+//   goes through DirectoryEntry and finds DIR_Name that equals filename,
+//   returns index of matched DIR_Name, -1 if no match
+// - from compare.c function from class GitHub
 // - converts foo.txt to FOO     TXT
-int compareFilename(char *fn, char *img_name)
+int compareFilename(char *fn)
 {
    // reserve 12 bits for filename (11 for filename + 1 for null terminator)
    char expanded_name[12];
@@ -97,14 +99,52 @@ int compareFilename(char *fn, char *img_name)
       expanded_name[i]=toupper(expanded_name[i]);
    }
 
-   if(strncmp(expanded_name, img_name, 11) ==0)
+   // fseek to location where directory starts
+   fseek(fp, 0x100400, SEEK_SET);
+   // read the directory data at beginning of directory
+   fread( &dir[0], sizeof(struct DirectoryEntry), 16, fp);
+   //go through DirectoryEntry and find file that matches
+   for(int i =0; i<16; i++)
    {
-      return 1;
+      if(strncmp(expanded_name, dir[i].DIR_Name, 11) ==0)
+      {
+         return i;
+      }
    }
 
-   return 0;
+   return -1;
 }
 
+
+/* (From FAT-1.pdf on Canvas)
+   Function: LBAtoOffset
+   Parameters: The current sector number that points to a block of data
+   Returns: The value of the address for that block of data
+   Description: Finds the starting address of a block of data given the sector number
+                corresponding to that data block
+*/
+int LBAtoOffset(int32_t sector)
+{
+   return ((sector - 2) * BPB_BytesPerSec) + (BPB_BytesPerSec * BPB_RsvdSecCnt)
+            + (BPB_NumFATS * BPB_FATSz32 * BPB_BytesPerSec);
+}
+
+
+/* (from FAT-1.pdf on Canvas)
+   Name: NextLB
+   Purpose: Given a logical block address, look up into the first FAT and return the
+            logical block address of the block in the file. If there is no further blocks
+            then return -1
+*/
+int16_t NextLB(uint32_t sector)
+{
+   uint32_t FATAddress = (BPB_BytesPerSec * BPB_RsvdSecCnt) + (sector * 4);
+   int16_t val;
+   fseek(fp, FATAddress, SEEK_SET);
+   fread(&val, 2, 1, fp);
+
+   return val;
+}
 
 /*
 This command shall open a fat32 image.  Filenames of fat32 images
@@ -175,42 +215,37 @@ both hexadecimal and base 10:
 */
 void fileInfo() //10 points
 {
-   // int16_t BPB_BytesPerSec;
-   // int8_t BPB_SecPerClus;
-   // int16_t BPB_RsvdSecCnt;
-   // int8_t BPB_NumFATS;
-   // int32_t BPB_FATSz32;
-
    //if open, print info
-   //else print that no file is open
    if(fileOpen)
    {
       //code
       //get BytesPerSec which starts at 11, size of 2
       fseek(fp, 11, SEEK_SET);
       fread(&BPB_BytesPerSec, 2, 1, fp);
-      printf("BPB_BytesPerSec: %d\n", BPB_BytesPerSec);
+      printf("BPB_BytesPerSec: \t%d \t%x\n", BPB_BytesPerSec, BPB_BytesPerSec);
 
       //get BPB_SecPerClus which starts at 13, size of 1
       fseek(fp, 13, SEEK_SET);
       fread(&BPB_SecPerClus, 1, 1, fp);
-      printf("BPB_SecPerClus: %d\n", BPB_SecPerClus);
+      printf("BPB_SecPerClus: \t%d \t%x\n", BPB_SecPerClus, BPB_SecPerClus);
 
       //get BPB_RsvdSecCnt which starts at 14, size of 2
       fseek(fp, 14, SEEK_SET);
       fread(&BPB_RsvdSecCnt, 2, 1, fp);
-      printf("BPB_RsvdSecCnt: %d\n", BPB_RsvdSecCnt);
+      printf("BPB_RsvdSecCnt: \t%d \t%x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
 
       //get BPB_NumFATS which starts at 16, size of 1
       fseek(fp, 16, SEEK_SET);
       fread(&BPB_NumFATS, 1, 1, fp);
-      printf("BPB_NumFATS: %d\n", BPB_NumFATS);
+      printf("BPB_NumFATS: \t\t%d \t%x\n", BPB_NumFATS, BPB_NumFATS);
 
       //get BPB_FATSz32 which starts at 36, size of 4
       fseek(fp, 36, SEEK_SET);
       fread(&BPB_FATSz32, 4, 1, fp);
-      printf("BPB_FATSz32: %d\n", BPB_FATSz32);
+      printf("BPB_FATSz32: \t\t%d \t%x\n", BPB_FATSz32, BPB_FATSz32);
    }
+
+   //else print that no file is open
    else
    {
       printf("Error: File system image must be opened first.\n");
@@ -248,52 +283,64 @@ shall output “Error: File not found”.
 */
 void getFile(char *fn) //15 points
 {
-   //if open, print info
-   //else print that no file is open
+   //if open, get file
    if(fileOpen)
    {
-      //code
-      // PSUEDO CODE FROM 4/13 ECHO
-      // same ish for read
-      // - search directory for where the given file starts
-      // - save low cluster number
-      // - save file size -> know how to get to file
+      // - look up directory and compare filename for match
+      int index=compareFilename(fn);
 
-      //1. look up Directory
-      //2. compare filenames
-      //3. get cluster number
-      //4. calculate offset
-      //5. fseek to that offset
-      //6. read/write loop over until copied whole file
+      //if no match was found
+      if(index==-1)
+      {
+         printf("Error: File not found.\n");
+         return;
+      }
 
-      // int offset=LBAtoOffset(clusterNumber);
-      // fseek(fp, offset, SEEK_SET);
-      // outputfp = fopen(token[1], "w");
-      // uint8_t buffer[512];
-      //
-      // while(size > BPB_BytesPerSec)
-      // {
-      //    fread(buffer, 512, 1, fp);
-      //    write(buffer, 512, 1, outputfp);
-      //    size=size-BPB_BytesPerSec;
-      //
-      //    //need new offset
-      //    cluster=NextLB(cluster);
-      //    if(cluster > -1)
-      //    {
-      //       offset=LBAtoOffset(cluster);
-      //       fseek(fp, offset, SEEK_SET);
-      //    }
-      //
-      //    if(size>0) //have leftover -> external fragmentation
-      //    {
-      //       fread(buffer, size, 1, fp);
-      //       write(buffer, size, 1, outputfp);
-      //    }
-      // }
-      //
-      // fclose(outputfp);
+      // - get low cluster number
+      uint16_t cluster = dir[index].DIR_FirstClusterLow;
+      // - save file size
+      uint32_t fsize = dir[index].DIR_FileSize;
+      // - calculate offset
+      int offset = LBAtoOffset(cluster);
+      // - fseek to that offset
+      fseek(fp, offset, SEEK_SET); //fp is pointing exactly where the file begins
+      // - get file pointer to output file
+      FILE *outputfp = fopen(fn, "w");
+      // - create buffer with size 512 because 512 = BPB_BytesPerSec
+      uint8_t buffer[512];
+
+      // - for all clusters in the file
+      //    - read from disk image, into buffer
+      //    - write from buffer, to new output file
+      while(fsize >= BPB_BytesPerSec)
+      {
+         fread(buffer, 512, 1, fp);
+         fwrite(buffer, 512, 1, outputfp);
+
+         // - update file size
+         fsize = fsize - BPB_BytesPerSec;
+         // - update offset
+         if(cluster > -1)
+         {
+            cluster = NextLB(cluster);
+            offset = LBAtoOffset(cluster);
+            fseek(fp, offset, SEEK_SET);
+         }
+
+      }
+
+      //need to handle last block (where file size < 512 due to external fragmentation)
+      if(fsize > 0)
+      {
+         fread(buffer, fsize, 1, fp);
+         fwrite(buffer, fsize, 1, outputfp);
+      }
+
+      //close connection to output file
+      fclose(outputfp);
    }
+
+   //else print that no file is open
    else
    {
       printf("Error: File system image must be opened first.\n");
@@ -517,7 +564,7 @@ int main()
       if(strcmp(token[0], "get") == 0)
       {
          // pass in filename parameter (token[1])
-         // getFile(token[1]);
+         getFile(token[1]);
       }
 
       if(strcmp(token[0], "cd") == 0)
