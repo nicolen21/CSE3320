@@ -106,7 +106,7 @@ int compareFilename(char *fn)
    //go through DirectoryEntry and find file that matches
    for(int i =0; i<16; i++)
    {
-      if(strncmp(expanded_name, dir[i].DIR_Name, 11) ==0)
+      if(strncmp(expanded_name, dir[i].DIR_Name, 11) == 0)
       {
          return i;
       }
@@ -380,17 +380,38 @@ to the given directory. Your program shall support relative
 paths, e.g cd ../name and absolute paths. (HE SAID ABSOLUTE PATH
 DOESN'T NEED TO BE DONE IN CLASS)
 */
-void changeDir() //10 points
+void changeDir(char *fn) //10 points
 {
-   //if open, print info
-   //else print that no file is open
    if(fileOpen)
    {
-      //code
+      /* from 4/18 Echo recording, doesn't actually change directory
+
+      // - get index of where given directory matches a directory in fat32.img
+      int index = compareFilename(fn);
+
+      //if no match was found
+      if(index==-1)
+      {
+         printf("Error: File not found.\n");
+         return;
+      }
+      printf("Index: %d\n", index);
+      // - get low cluster number
+      uint16_t cluster = dir[index].DIR_FirstClusterLow;
+      // - calculate offset
+      int offset = LBAtoOffset(cluster);
+      // - fseek to that offset
+      fseek(fp, offset, SEEK_SET); //fp is pointing exactly where the directory is located
+      // - create buffer with size 512 because 512 = BPB_BytesPerSec
+      uint8_t buffer[512];
+      // - read into directory
+      fread(&dir[0], sizeof(struct DirectoryEntry), 11, fp);
+
+      */
    }
    else
    {
-      printf("Error: File system image must be opened first.");
+      printf("Error: File system image must be opened first.\n");
    }
 }
 
@@ -597,7 +618,8 @@ int main()
 
       if(strcmp(token[0], "cd") == 0)
       {
-         //changeDir();
+         // pass in filename parameter (token[1])
+         changeDir(token[1]);
       }
 
       if(strcmp(token[0], "ls") == 0)
