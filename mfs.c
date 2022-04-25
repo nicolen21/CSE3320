@@ -69,6 +69,9 @@ struct DirectoryEntry dir[16];
 // global variables
 int fileOpen; //if 1, file is open; if 0, file is closed
 FILE *fp; //file pointer to fat32 image
+uint8_t attrHolder; //placeholder for attributes
+char fnHolder; //placeholder for file name
+char name[12]; //reserve 12 characters for file name (11 bits plus 1 null)
 
 
 // compareFilename converts the given filename to an expanded filename,
@@ -170,11 +173,32 @@ void openFile(char* fn) //5 points
    {
       if(fp != NULL)
       {
-         fileOpen=1;
+        fileOpen = 1;
+        
+        //reading in BPB variables
+        fseek(fp, 11, SEEK_SET);
+        fread(&BPB_BytesPerSec, 2, 1, fp);
+
+        fseek(fp, 13, SEEK_SET);
+        fread(&BPB_SecPerClus, 1, 1, fp);
+
+        fseek(fp, 14, SEEK_SET);
+        fread(&BPB_RsvdSecCnt, 2, 1, fp);
+
+        fseek(fp, 16, SEEK_SET);
+        fread(&BPB_NumFATs, 1, 1, fp);
+
+        fseek(fp, 36, SEEK_SET);
+        fread(&BPB_FATSz32, 4, 1, fp);
+
+        // file pointer placed at root
+        fseek(fp, BPB_NumFATs * (BPB_FATSz32 * BPB_BytesPerSec) + 
+                                (BPB_RsvdSecCnt * BPB_BytesPerSec), SEEK_SET);
+        fread(&dir[0],sizeof(struct DirectoryEntry), 16, fp);
       }
       else
       {
-         printf("Error: File system image not found.\n");
+        printf("Error: File system image not found.\n");
       }
    }
 }
@@ -193,7 +217,7 @@ void closeFile() //5 points
    if(fileOpen)
    {
       fclose(fp);
-      fileOpen=0;
+      fileOpen = 0;
    }
    else
    {
@@ -383,7 +407,7 @@ DOESN'T NEED TO BE DONE IN CLASS)
 void changeDir(char *fn) //10 points
 {
    if(fileOpen)
-   {
+   {  
       /* from 4/18 Echo recording, doesn't actually change directory
 
       // - get index of where given directory matches a directory in fat32.img
@@ -424,8 +448,6 @@ volume names.
 */
 void listDir() //10 points
 {
-   //if open, print info
-   //else print that no file is open
    if(fileOpen)
    {
       //code
@@ -441,8 +463,6 @@ void listDir() //10 points
          if((dir[i].DIR_Attr == 0x01 || dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20)
             && dir[i].DIR_Name[0] != 0xe5)
          {
-            //reserve 12 characters for file name (11 bits plus 1 null)
-            char name[12];
             memcpy(name, dir[i].DIR_Name, 11);
             name[11]='\0';
             printf("%s\n", name);
@@ -489,21 +509,37 @@ void readFile() //10 points
 /*
 Deletes the file from the file system
 */
-void deleteFile() //10 points
+void deleteFile(char *fn) //10 points
 {
-   //if open, print info
-   //else print that no file is open
-   if(fileOpen)
-   {
-      /*remove(argv[0]);
-        if remove(arg) == 0, then print out delete successfully
-        else print didn't remove successfully
-      */
-   }
-   else
-   {
-      printf("Error: File system image must be opened first.");
-   }
+  //check if file exists
+  for(i = 0; i < 16; i++)
+  {
+    if(!compareFilename(dir[i].DIR_NAME, token[1]))
+    {
+      fileOpen = 0;
+      break;
+    }
+  }
+
+  //if file is open, delete file
+  if(fileOpen)
+  {
+    //save attributes into a placeholder
+    attrHolder = dir[i].DIR_Attr;
+    //delete file by assigning value 0xe5
+    dir[i].DIR_Attr = 0xe5;
+    //save file name into a placeholder
+    strncopy(fnHolder, dir[i].DIR_Name, 11);
+    //change file name to show that it has been deleted
+    strcpy(dir[i].DIR_NAME,"Deleted File");
+    
+    printf("File successfully deleted.\n");
+  }
+  //else print file not found
+  else
+  {
+    printf("Error: File to be delete not found.\n");
+  }
 }
 
 
@@ -512,7 +548,30 @@ Un-deletes the file from the file system
 */
 void restoreFile() //10 points
 {
+  //if 0, not a deleted file; if 1, deleted file
+  int deleted = 0;
 
+  for(i = 0; i < 16; i++)
+  {
+    //if there is no deleted files, break out of loop
+    if(!strcmp(dir[i].DIR_NAME,"Deleted File"))
+    {
+      deleted = 0;
+      break;
+    }
+  }
+  //if it is a deleted file
+  if(deleted)
+  {
+    //assign name placeholder to DIR_Name
+    strncopy(dir[i].DIR_Name, fnHolder, 11);
+    //assign attributes placeholder to AIR_Attr
+    dir[i].DIR_Attr = attrHolder;
+  }
+  else
+  {
+    printf("Error: File could not be restored. \n");
+  }
 }
 
 
@@ -594,7 +653,6 @@ int main()
       {
          // pass in filename parameter (token[1])
          openFile(token[1]);
-         continue;
       }
 
       if(strcmp(token[0], "close") == 0)
@@ -607,7 +665,7 @@ int main()
          fileInfo();
       }
 
-      if(strcmp(token[0], "stat")==0)
+      if(strcmp(token[0], "stat") == 0)
       {
          // pass in filename parameter (token[1])
          fileStat(token[1]);
@@ -637,7 +695,7 @@ int main()
 
       if(strcmp(token[0], "del") == 0)
       {
-         //deleteFile();
+         //deleteFile(token[1]);
       }
 
       if(strcmp(token[0], "undel") == 0)
