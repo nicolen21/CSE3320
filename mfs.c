@@ -1,3 +1,4 @@
+
 // The MIT License (MIT)
 //
 // Copyright (c) 2020 Trevor Bakker
@@ -23,12 +24,11 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
-#include <string.h>
-#include <stdint.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <string.h>
 #include <signal.h>
 #include <ctype.h>
 
@@ -74,6 +74,7 @@ uint8_t attrHolder; //placeholder for attributes
 char fnHolder[11]; //placeholder for file name
 char name[12]; //reserve 12 characters for file name (11 bits plus 1 null)
 
+
 // compareFilename converts the given filename to an expanded filename,
 //   goes through DirectoryEntry and finds DIR_Name that equals filename,
 //   returns index of matched DIR_Name, -1 if no match
@@ -117,6 +118,7 @@ int compareFilename(char *fn)
 
    return -1;
 }
+
 
 /* (From FAT-1.pdf on Canvas)
    Function: LBAtoOffset
@@ -172,32 +174,32 @@ void openFile(char* fn) //5 points
    {
       if(fp != NULL)
       {
-        fileOpen = 1;
-        
-        //reading in BPB variables
-        fseek(fp, 11, SEEK_SET);
-        fread(&BPB_BytesPerSec, 2, 1, fp);
+         fileOpen=1;
 
-        fseek(fp, 13, SEEK_SET);
-        fread(&BPB_SecPerClus, 1, 1, fp);
+         //reading in BPB variables
+         fseek(fp, 11, SEEK_SET);
+         fread(&BPB_BytesPerSec, 2, 1, fp);
 
-        fseek(fp, 14, SEEK_SET);
-        fread(&BPB_RsvdSecCnt, 2, 1, fp);
+         fseek(fp, 13, SEEK_SET);
+         fread(&BPB_SecPerClus, 1, 1, fp);
 
-        fseek(fp, 16, SEEK_SET);
-        fread(&BPB_NumFATs, 1, 1, fp);
+         fseek(fp, 14, SEEK_SET);
+         fread(&BPB_RsvdSecCnt, 2, 1, fp);
 
-        fseek(fp, 36, SEEK_SET);
-        fread(&BPB_FATSz32, 4, 1, fp);
+         fseek(fp, 16, SEEK_SET);
+         fread(&BPB_NumFATs, 1, 1, fp);
 
-        // file pointer placed at root
-        fseek(fp, BPB_NumFATs * (BPB_FATSz32 * BPB_BytesPerSec) + 
-                                (BPB_RsvdSecCnt * BPB_BytesPerSec), SEEK_SET);
-        fread(&dir[0],sizeof(struct DirectoryEntry), 16, fp);
+         fseek(fp, 36, SEEK_SET);
+         fread(&BPB_FATSz32, 4, 1, fp);
+
+         // file pointer placed at root
+         fseek(fp, BPB_NumFATs * (BPB_FATSz32 * BPB_BytesPerSec) +
+                                 (BPB_RsvdSecCnt * BPB_BytesPerSec), SEEK_SET);
+         fread(&dir[0],sizeof(struct DirectoryEntry), 16, fp);
       }
       else
       {
-        printf("Error: File system image not found.\n");
+         printf("Error: File system image not found.\n");
       }
    }
 }
@@ -216,7 +218,7 @@ void closeFile() //5 points
    if(fileOpen)
    {
       fclose(fp);
-      fileOpen = 0;
+      fileOpen=0;
    }
    else
    {
@@ -242,28 +244,28 @@ void fileInfo() //10 points
    if(fileOpen)
    {
       //get BytesPerSec which starts at 11, size of 2
-      fseek(fp, 11, SEEK_SET);
-      fread(&BPB_BytesPerSec, 2, 1, fp);
+      // fseek(fp, 11, SEEK_SET);
+      // fread(&BPB_BytesPerSec, 2, 1, fp);
       printf("BPB_BytesPerSec: \t%d \t%x\n", BPB_BytesPerSec, BPB_BytesPerSec);
 
       //get BPB_SecPerClus which starts at 13, size of 1
-      fseek(fp, 13, SEEK_SET);
-      fread(&BPB_SecPerClus, 1, 1, fp);
+      // fseek(fp, 13, SEEK_SET);
+      // fread(&BPB_SecPerClus, 1, 1, fp);
       printf("BPB_SecPerClus: \t%d \t%x\n", BPB_SecPerClus, BPB_SecPerClus);
 
       //get BPB_RsvdSecCnt which starts at 14, size of 2
-      fseek(fp, 14, SEEK_SET);
-      fread(&BPB_RsvdSecCnt, 2, 1, fp);
+      // fseek(fp, 14, SEEK_SET);
+      // fread(&BPB_RsvdSecCnt, 2, 1, fp);
       printf("BPB_RsvdSecCnt: \t%d \t%x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
 
       //get BPB_NumFATS which starts at 16, size of 1
-      fseek(fp, 16, SEEK_SET);
-      fread(&BPB_NumFATS, 1, 1, fp);
+      // fseek(fp, 16, SEEK_SET);
+      // fread(&BPB_NumFATS, 1, 1, fp);
       printf("BPB_NumFATS: \t\t%d \t%x\n", BPB_NumFATS, BPB_NumFATS);
 
       //get BPB_FATSz32 which starts at 36, size of 4
-      fseek(fp, 36, SEEK_SET);
-      fread(&BPB_FATSz32, 4, 1, fp);
+      // fseek(fp, 36, SEEK_SET);
+      // fread(&BPB_FATSz32, 4, 1, fp);
       printf("BPB_FATSz32: \t\t%d \t%x\n", BPB_FATSz32, BPB_FATSz32);
    }
 
@@ -346,8 +348,11 @@ void getFile(char *fn) //15 points
          return;
       }
 
+      fseek(fp, 16, SEEK_SET);
+      fread(&BPB_NumFATS, 1, 1, fp);
+
       // - get low cluster number
-      uint16_t cluster = dir[index].DIR_FirstClusterLow;
+      int cluster = dir[index].DIR_FirstClusterLow;
       // - save file size
       uint32_t fsize = dir[index].DIR_FileSize;
       // - calculate offset
@@ -406,7 +411,7 @@ DOESN'T NEED TO BE DONE IN CLASS)
 void changeDir(char *fn) //10 points
 {
    if(fileOpen)
-   {  
+   {
       /* from 4/18 Echo recording, doesn't actually change directory
 
       // - get index of where given directory matches a directory in fat32.img
@@ -447,13 +452,15 @@ volume names.
 */
 void listDir() //10 points
 {
+   //if open, print info
+   //else print that no file is open
    if(fileOpen)
    {
       //code
       // - read the directory data
-      //fseek(fp, 0x100400, SEEK_SET);
+      // fseek(fp, 0x100400, SEEK_SET);
       // - read at beginning of directory
-      //fread( &dir[0], sizeof(struct DirectoryEntry), 16, fp);
+      // fread( &dir[0], sizeof(struct DirectoryEntry), 16, fp);
 
       for(int i=0; i<16; i++)
       {
@@ -462,6 +469,8 @@ void listDir() //10 points
          if((dir[i].DIR_Attr == 0x01 || dir[i].DIR_Attr == 0x10 || dir[i].DIR_Attr == 0x20)
             && dir[i].DIR_Name[0] != 0xe5)
          {
+            //reserve 12 characters for file name (11 bits plus 1 null)
+            char name[12];
             memcpy(name, dir[i].DIR_Name, 11);
             name[11]='\0';
             printf("%s\n", name);
@@ -510,31 +519,31 @@ Deletes the file from the file system
 */
 void deleteFile(char *fn) //10 points
 {
-  if(fileOpen)
-  {
-    int i = compareFilename(fn);
+   if(fileOpen)
+   {
+     int i = compareFilename(fn);
 
-    if(i == -1)
-    {
-      printf("File not found.\n");
-      return;
-    }
-    else
-    {
-      //save attributes into a placeholder
-      attrHolder = dir[i].DIR_Attr;
-      //delete file by setting attribute to 0xe5
-      dir[i].DIR_Attr = 0xe5;
-      //save file name into a placeholder
-      strncpy(fnHolder, dir[i].DIR_Name, 11);
-      //change file name to show that it has been deleted
-      strcpy(dir[i].DIR_Name, "?");
-    }
-  }
-  else
-  {
-    printf("Error: File system image must be opened first.\n");
-  }
+     if(i == -1)
+     {
+       printf("File not found.\n");
+       return;
+     }
+     else
+     {
+       //save attributes into a placeholder
+       attrHolder = dir[i].DIR_Attr;
+       //delete file by setting attribute to 0xe5
+       dir[i].DIR_Attr = 0xe5;
+       //save file name into a placeholder
+       strncpy(fnHolder, dir[i].DIR_Name, 11);
+       //change file name to show that it has been deleted
+       strcpy(dir[i].DIR_Name, "?");
+     }
+   }
+   else
+   {
+     printf("Error: File system image must be opened first.\n");
+   }
 }
 
 
@@ -543,38 +552,38 @@ Un-deletes the file from the file system
 */
 void restoreFile(char *fn) //10 points
 {
-  //if 0, not a deleted file; if 1, deleted file
-  int deleted = 0;
-  int i;
+   //if 0, not a deleted file; if 1, deleted file
+   int deleted = 0;
+   int i;
 
-  if(fileOpen)
-  {
-    for(i = 0; i < 16; i++)
-    {
-      //if there is no deleted files, break out of loop
-      if(!strcmp(dir[i].DIR_Name,"?"))
-      {
-        deleted = 1;
-        break;
-      }
-    }
-    //if it is a deleted file
-    if(deleted)
-    {
-      //assign name placeholder to DIR_Name
-      strncpy(dir[i].DIR_Name, fnHolder, 11);
-      //assign attributes placeholder to DIR_Attr
-      dir[i].DIR_Attr = attrHolder;
-    }
-    else
-    {
-      printf("Error: File not found. \n");
-    }
-  }
-  else
-  {
-    printf("Error: File system image must be opened first.\n");
-  }
+   if(fileOpen)
+   {
+     for(i = 0; i < 16; i++)
+     {
+       //if there is no deleted files, break out of loop
+       if(!strcmp(dir[i].DIR_Name,"?"))
+       {
+         deleted = 1;
+         break;
+       }
+     }
+     //if it is a deleted file
+     if(deleted)
+     {
+       //assign name placeholder to DIR_Name
+       strncpy(dir[i].DIR_Name, fnHolder, 11);
+       //assign attributes placeholder to DIR_Attr
+       dir[i].DIR_Attr = attrHolder;
+     }
+     else
+     {
+       printf("Error: File not found. \n");
+     }
+   }
+   else
+   {
+     printf("Error: File system image must be opened first.\n");
+   }
 }
 
 
@@ -625,16 +634,6 @@ int main()
          token_count++;
       }
 
-      // ----------------------------------------------------------------------
-      // Now print the tokenized input as a debug check
-      // \TODO Remove this code and replace with your FAT32 functionality
-
-      // int token_index  = 0;
-      // for( token_index = 0; token_index < token_count; token_index ++ )
-      // {
-      //    printf("token[%d] = %s\n", token_index, token[token_index] );
-      // }
-      // ----------------------------------------------------------------------
 
 
       // ------------------------------ COMMANDS ------------------------------
@@ -669,7 +668,7 @@ int main()
          fileInfo();
       }
 
-      if(strcmp(token[0], "stat") == 0)
+      if(strcmp(token[0], "stat")==0)
       {
          // pass in filename parameter (token[1])
          fileStat(token[1]);
@@ -684,7 +683,7 @@ int main()
       if(strcmp(token[0], "cd") == 0)
       {
          // pass in filename parameter (token[1])
-         changeDir(token[1]);
+         // changeDir(token[1]);
       }
 
       if(strcmp(token[0], "ls") == 0)
@@ -699,11 +698,13 @@ int main()
 
       if(strcmp(token[0], "del") == 0)
       {
+         // pass in filename parameter (token[1])
          deleteFile(token[1]);
       }
 
       if(strcmp(token[0], "undel") == 0)
       {
+         // pass in filename parameter (token[1])
          restoreFile(token[1]);
       }
 
