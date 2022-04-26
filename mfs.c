@@ -76,66 +76,25 @@ char fnHolder[11]; //placeholder for file name
 char name[12]; //reserve 12 characters for file name (11 bits plus 1 null)
 
 
-// compareFilename converts the given filename to an expanded filename,
+// compare converts the given filename to an expanded filename,
 //   goes through DirectoryEntry and finds DIR_Name that equals filename,
 //   returns index of matched DIR_Name, -1 if no match
 // - from compare.c function from class GitHub
 // - converts foo.txt to FOO     TXT
-int compareFilename(char *fn)
-{
-   // reserve 12 bits for filename (11 for filename + 1 for null terminator)
-   char expanded_name[12];
-   memset(expanded_name, ' ', 12);
-
-   char *token=strtok(fn, ".");
-   strncpy(expanded_name, token, strlen(token));
-
-   token=strtok(NULL, ".");
-
-   if(token)
-   {
-      strncpy((char*)(expanded_name+8), token, strlen(token));
-   }
-
-   expanded_name[11]='\0';
-
-   for(int i=0; i<11; i++)
-   {
-      expanded_name[i]=toupper(expanded_name[i]);
-   }
-
-   // fseek to location where directory starts
-   fseek(fp, 0x100400, SEEK_SET);
-   // read the directory data at beginning of directory
-   fread( &dir[0], sizeof(struct DirectoryEntry), 16, fp);
-   //go through DirectoryEntry and find file that matches
-   for(int i =0; i<16; i++)
-   {
-      if(strncmp(expanded_name, dir[i].DIR_Name, 11) == 0)
-      {
-         return i;
-      }
-   }
-
-   return -1;
-}
-
-
-//COMPARE FOR CD
-int compare(char *_input, char *_DIR_Name)
+int compare(char *input, char *nameInDir)
 {
    char IMG_Name[11];
 
-   char input[11];
+   char in[11];
    char expanded_name[12];
 
-   strncpy(IMG_Name, _DIR_Name, 11);
-   strncpy(input, _input, 11);
+   strncpy(IMG_Name, nameInDir, 11);
+   strncpy(in, input, 11);
 
-   if(strncmp(_input, "..", 2) != 0)
+   if(strncmp(input, "..", 2) != 0)
    {
       memset(expanded_name, ' ', 12);
-      char *token = strtok(input, ".");
+      char *token = strtok(in, ".");
       strncpy(expanded_name, token, strlen(token));
       token = strtok(NULL, ".");
 
@@ -482,8 +441,8 @@ void changeDir(char *fn) //10 points
          }
       }
 
-      char *directoy;
-      directoy = strtok(fn, "/");
+      char *direct;
+      direct = strtok(fn, "/");
       for(i = 0; i < 16; i++)
       {
          if(!compare(fn, dir[i].DIR_Name))
@@ -491,6 +450,7 @@ void changeDir(char *fn) //10 points
             int cluster = dir[i].DIR_FirstClusterLow;
             int offset = LBAtoOffset(cluster);
 
+            //checks for root
             if(cluster == 0)
             {
                cluster = 2;
@@ -503,9 +463,11 @@ void changeDir(char *fn) //10 points
          }
       }
 
-      while((directoy = strtok(NULL, "/")))
+      while((direct = strtok(NULL, "/")))
       {
          int cluster = dir[i].DIR_FirstClusterHigh;
+         
+         //checks for root 
          if(cluster == 0)
          {
             cluster = 2;
