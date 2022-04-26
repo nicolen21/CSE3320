@@ -77,10 +77,9 @@ char name[12]; //reserve 12 characters for file name (11 bits plus 1 null)
 
 
 // compare converts the given filename to an expanded filename,
-//   goes through DirectoryEntry and finds DIR_Name that equals filename,
-//   returns index of matched DIR_Name, -1 if no match
+//   goes through DirectoryEntry and finds if a DIR_Name that equals filename,
+//   returns 0 if match, 1 if no match
 // - from compare.c function from class GitHub
-// - converts foo.txt to FOO     TXT
 int compare(char *input, char *nameInDir)
 {
    char IMG_Name[11];
@@ -129,6 +128,7 @@ int compare(char *input, char *nameInDir)
    return 1;
 }
 
+
 /* (From FAT-1.pdf on Canvas)
 Function: LBAtoOffset
 Parameters: The current sector number that points to a block of data
@@ -158,6 +158,7 @@ int16_t NextLB(uint32_t sector)
 
    return val;
 }
+
 
 /*
 This command shall open a fat32 image.  Filenames of fat32 images
@@ -234,7 +235,7 @@ void closeFile() //5 points
       printf("Error: File system not open.\n");
    }
 }
-//still need to add "Error: File system image must be opened first" part
+
 
 
 /*
@@ -253,28 +254,18 @@ void fileInfo() //10 points
    if(fileOpen)
    {
       //get BytesPerSec which starts at 11, size of 2
-      // fseek(fp, 11, SEEK_SET);
-      // fread(&BPB_BytesPerSec, 2, 1, fp);
       printf("BPB_BytesPerSec: \t%d \t%x\n", BPB_BytesPerSec, BPB_BytesPerSec);
 
       //get BPB_SecPerClus which starts at 13, size of 1
-      // fseek(fp, 13, SEEK_SET);
-      // fread(&BPB_SecPerClus, 1, 1, fp);
       printf("BPB_SecPerClus: \t%d \t%x\n", BPB_SecPerClus, BPB_SecPerClus);
 
       //get BPB_RsvdSecCnt which starts at 14, size of 2
-      // fseek(fp, 14, SEEK_SET);
-      // fread(&BPB_RsvdSecCnt, 2, 1, fp);
       printf("BPB_RsvdSecCnt: \t%d \t%x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
 
       //get BPB_NumFATS which starts at 16, size of 1
-      // fseek(fp, 16, SEEK_SET);
-      // fread(&BPB_NumFATS, 1, 1, fp);
       printf("BPB_NumFATS: \t\t%d \t%x\n", BPB_NumFATs, BPB_NumFATs);
 
       //get BPB_FATSz32 which starts at 36, size of 4
-      // fseek(fp, 36, SEEK_SET);
-      // fread(&BPB_FATSz32, 4, 1, fp);
       printf("BPB_FATSz32: \t\t%d \t%x\n", BPB_FATSz32, BPB_FATSz32);
    }
 
@@ -306,9 +297,17 @@ void fileStat(char *fn) //10 points
       }
 
       // - look up directory and compare filename for match
-      int index=compareFilename(fn);
+      // - find index in dir[] where filename matches
+      int index=-1;
+      for(int i=0; i<16; i++)
+      {
+         if(compare(fn, dir[i].DIR_Name)==0)
+         {
+            index = i;
+         }
+      }
 
-      // if no match was found
+      //if no match was found
       if(index==-1)
       {
          printf("Error: File not found.\n");
@@ -347,8 +346,15 @@ void getFile(char *fn) //15 points
          return;
       }
 
-      // - look up directory and compare filename for match
-      int index=compareFilename(fn);
+      // - find index in dir[] where filename matches
+      int index=-1;
+      for(int i=0; i<16; i++)
+      {
+         if(compare(fn, dir[i].DIR_Name)==0)
+         {
+            index = i;
+         }
+      }
 
       //if no match was found
       if(index==-1)
@@ -466,8 +472,8 @@ void changeDir(char *fn) //10 points
       while((direct = strtok(NULL, "/")))
       {
          int cluster = dir[i].DIR_FirstClusterHigh;
-         
-         //checks for root 
+
+         //checks for root
          if(cluster == 0)
          {
             cluster = 2;
@@ -542,8 +548,15 @@ void readFile(char *fn, char *pos, char *n_b) //10 points
          return;
       }
 
-      // - look up directory and compare filename for match
-      int index=compareFilename(fn);
+      // - get index of dir[] where filename matches
+      int index=-1;
+      for(int i=0; i<16; i++)
+      {
+         if(compare(fn, dir[i].DIR_Name)==0)
+         {
+            index = i;
+         }
+      }
 
       //if no match was found
       if(index==-1)
@@ -601,23 +614,33 @@ void deleteFile(char *fn) //10 points
 {
    if(fileOpen)
    {
-      int i = compareFilename(fn);
-
-      if(i == -1)
+      // - get index of dir[] where filename matches
+      int index=-1;
+      for(int i=0; i<16; i++)
       {
-         printf("File not found.\n");
+         if(compare(fn, dir[i].DIR_Name)==0)
+         {
+            index = i;
+         }
+      }
+
+      //if no match was found
+      if(index==-1)
+      {
+         printf("Error: File not found.\n");
          return;
       }
+
       else
       {
          //save attributes into a placeholder
-         attrHolder = dir[i].DIR_Attr;
+         attrHolder = dir[index].DIR_Attr;
          //delete file by setting attribute to 0xe5
-         dir[i].DIR_Attr = 0xe5;
+         dir[index].DIR_Attr = 0xe5;
          //save file name into a placeholder
-         strncpy(fnHolder, dir[i].DIR_Name, 11);
+         strncpy(fnHolder, dir[index].DIR_Name, 11);
          //change file name to show that it has been deleted
-         strcpy(dir[i].DIR_Name, "?");
+         strcpy(dir[index].DIR_Name, "?");
       }
    }
    else
