@@ -24,6 +24,7 @@
 #define _GNU_SOURCE
 
 #include <stdio.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <stdlib.h>
@@ -82,7 +83,7 @@ char name[12]; //reserve 12 characters for file name (11 bits plus 1 null)
 // - converts foo.txt to FOO     TXT
 int compareFilename(char *fn)
 {
-   // reserve 12 bits for filename (11 for filename + 1 for null terminator)
+  // reserve 12 bits for filename (11 for filename + 1 for null terminator)
    char expanded_name[12];
    memset(expanded_name, ' ', 12);
 
@@ -116,7 +117,56 @@ int compareFilename(char *fn)
       }
    }
 
-   return -1;
+  return -1;
+}
+
+//COMPARE FOR CD
+int compare(char *_input, char *_DIR_Name)
+{
+  char IMG_Name[11];
+
+  char input[11];
+  char expanded_name[12];
+
+  strncpy(IMG_Name, _DIR_Name, 11);
+  strncpy(input, _input, 11);
+
+  if(strncmp(_input, "..", 2) != 0)
+  {
+    memset(expanded_name, ' ', 12);
+    char *token = strtok(input, ".");
+    strncpy(expanded_name, token, strlen(token));
+    token = strtok(NULL, ".");
+
+    if(token)
+    {
+      strncpy((char *)(expanded_name + 8), token, strlen(token));
+    }
+
+    expanded_name[11] = '\0';
+
+    int i;
+    for (i = 0; i < 11; i++)
+    {
+      expanded_name[i] = toupper(expanded_name[i]);
+    }
+  }
+  else
+  {
+    strncpy(expanded_name, "..", 2);
+    expanded_name[3] = '\0';
+    if(strncmp(expanded_name, IMG_Name, 2) == 0)
+    {
+      return 0;
+    }
+    return 1;
+  }
+
+  if(strncmp(expanded_name, IMG_Name, 11) == 0)
+  {
+    return 0;
+  }
+  return 1;
 }
 
 
@@ -225,7 +275,6 @@ void closeFile() //5 points
       printf("Error: File system not open.\n");
    }
 }
-//still need to add "Error: File system image must be opened first" part
 
 
 /*
@@ -405,42 +454,68 @@ void getFile(char *fn) //15 points
 /*
 This command shall change the current working directory
 to the given directory. Your program shall support relative
-paths, e.g cd ../name and absolute paths. (HE SAID ABSOLUTE PATH
-DOESN'T NEED TO BE DONE IN CLASS)
+paths, e.g cd ../name and absolute paths. (ABSOLUTE PATH IS EXTRA CREDIT)
 */
 void changeDir(char *fn) //10 points
 {
-   if(fileOpen)
-   {
-      /* from 4/18 Echo recording, doesn't actually change directory
-
-      // - get index of where given directory matches a directory in fat32.img
-      int index = compareFilename(fn);
-
-      //if no match was found
-      if(index==-1)
+  if(fileOpen)
+  {
+    for(i = 0; i < 16; i++)
+    {
+      if(!compare(fn, dir[i].DIR_Name))
       {
-         printf("Error: File not found.\n");
-         return;
-      }
-      printf("Index: %d\n", index);
-      // - get low cluster number
-      uint16_t cluster = dir[index].DIR_FirstClusterLow;
-      // - calculate offset
-      int offset = LBAtoOffset(cluster);
-      // - fseek to that offset
-      fseek(fp, offset, SEEK_SET); //fp is pointing exactly where the directory is located
-      // - create buffer with size 512 because 512 = BPB_BytesPerSec
-      uint8_t buffer[512];
-      // - read into directory
-      fread(&dir[0], sizeof(struct DirectoryEntry), 11, fp);
+        int cluster = dir[i].DIR_FirstClusterLow;
 
-      */
-   }
-   else
-   {
-      printf("Error: File system image must be opened first.\n");
-   }
+        if(cluster == 0)
+        {
+          cluster = 2;
+        }
+        int offset = LBAtoOffset(cluster);
+
+        fseek(fp, offset, SEEK_SET);
+        fread(&dir[0], sizeof(struct DirectoryEntry), 16, fp);
+
+        break;
+      }
+    }
+
+    char *directoy;
+    directoy = strtok(fn, "/");
+    for(i = 0; i < 16; i++)
+    {
+      if(!compare(fn, dir[i].DIR_Name))
+      {
+        int cluster = dir[i].DIR_FirstClusterLow;
+        int offset = LBAtoOffset(cluster);
+
+        if(cluster == 0)
+        {
+          cluster = 2;
+        }
+
+        fseek(fp, offset, SEEK_SET);
+        fread(&dir[0], sizeof(struct DirectoryEntry), 16, fp);
+
+        break;
+      }
+    }
+
+    while((directoy = strtok(NULL, "/")))
+    {
+      int cluster = dir[i].DIR_FirstClusterHigh;
+      if(cluster == 0)
+      {
+        cluster = 2;
+      }
+      int offset = LBAtoOffset(cluster);
+      fseek(fp, offset, SEEK_SET);
+      fread(&dir[0], sizeof(struct DirectoryEntry), 16, fp);
+    }
+  }
+  else
+  {
+    printf("Error: File system image must be opened first.\n");
+  }
 }
 
 
@@ -491,21 +566,9 @@ the number of bytes specified.
 */
 void readFile() //10 points
 {
-   //if open, print info
-   //else print that no file is open
-   if(fileOpen)
+  if(fileOpen)
    {
       //code
-      // ------ not right yet -----------------------------------
-      // fseek to location where directory starts
-      // read the directory data
-      // fseek(fp, 0x100400, SEEK_SET);
-      // // at beginning of directory
-      // fread( &dir[0], sizeof(struct DirectoryEntry), 16, fp);
-      // for(int i =0; i<16; i++)
-      // {
-      //    printf("Filename: %s\n", dir[i].DIR_Name);
-      // }
    }
    else
    {
@@ -682,8 +745,7 @@ int main()
 
       if(strcmp(token[0], "cd") == 0)
       {
-         // pass in filename parameter (token[1])
-         // changeDir(token[1]);
+        changeDir(token[1]);
       }
 
       if(strcmp(token[0], "ls") == 0)
@@ -693,7 +755,7 @@ int main()
 
       if(strcmp(token[0], "read") == 0)
       {
-         //readFile();
+         //readFile(token[1], atoi(token[2]), atoi(token[3]));
       }
 
       if(strcmp(token[0], "del") == 0)
