@@ -33,6 +33,7 @@
 #include <ctype.h>
 #include <stdint.h>
 
+//changed it to 4 to fit read <filename> <position> <num of bytes> function
 #define MAX_NUM_ARGUMENTS 4
 
 #define WHITESPACE " \t\n"      // We want to split our command line up into tokens
@@ -53,9 +54,9 @@ int16_t BPB_RootEntCnt;
 char BS_VolLab[11];
 int32_t BPB_FATSz32;
 int32_t BPB_RootClus;
-//int8_t BPB_NumFATS;
 
-// given in class
+
+// given in class - FAT-1.pdf
 struct DirectoryEntry
 {
    char DIR_Name[11];
@@ -67,6 +68,7 @@ struct DirectoryEntry
    uint32_t DIR_FileSize;
 };
 struct DirectoryEntry dir[16];
+
 
 // global variables
 int fileOpen; //if 1, file is open; if 0, file is closed
@@ -186,27 +188,34 @@ void openFile(char* fn) //5 points
       {
          fileOpen=1;
 
-         //reading in BPB variables
+         // - reading in BPB variables
+         //   get BytesPerSec which starts at 11, size of 2
          fseek(fp, 11, SEEK_SET);
          fread(&BPB_BytesPerSec, 2, 1, fp);
 
+         //   get BPB_SecPerClus which starts at 13, size of 1
          fseek(fp, 13, SEEK_SET);
          fread(&BPB_SecPerClus, 1, 1, fp);
 
+         //   get BPB_RsvdSecCnt which starts at 14, size of 2
          fseek(fp, 14, SEEK_SET);
          fread(&BPB_RsvdSecCnt, 2, 1, fp);
 
+         //   get BPB_NumFATS which starts at 16, size of 1
          fseek(fp, 16, SEEK_SET);
          fread(&BPB_NumFATs, 1, 1, fp);
 
+         //   get BPB_FATSz32 which starts at 36, size of 4
          fseek(fp, 36, SEEK_SET);
          fread(&BPB_FATSz32, 4, 1, fp);
 
-         // file pointer placed at root
+         // - file pointer placed at root
          fseek(fp, BPB_NumFATs * (BPB_FATSz32 * BPB_BytesPerSec) +
          (BPB_RsvdSecCnt * BPB_BytesPerSec), SEEK_SET);
          fread(&dir[0],sizeof(struct DirectoryEntry), 16, fp);
       }
+
+      //let user know if file could not open
       else
       {
          printf("Error: File system image not found.\n");
@@ -228,11 +237,13 @@ void closeFile() //5 points
    if(fileOpen)
    {
       fclose(fp);
+      // change condition of fileOpen to closed
       fileOpen=0;
    }
+
    else
    {
-      printf("Error: File system not open.\n");
+      printf("Error: File system image must be opened first.\n");
    }
 }
 
@@ -253,19 +264,11 @@ void fileInfo() //10 points
    //if open, print info
    if(fileOpen)
    {
-      //get BytesPerSec which starts at 11, size of 2
+      // - print out FAT32 variables
       printf("BPB_BytesPerSec: \t%d \t%x\n", BPB_BytesPerSec, BPB_BytesPerSec);
-
-      //get BPB_SecPerClus which starts at 13, size of 1
       printf("BPB_SecPerClus: \t%d \t%x\n", BPB_SecPerClus, BPB_SecPerClus);
-
-      //get BPB_RsvdSecCnt which starts at 14, size of 2
       printf("BPB_RsvdSecCnt: \t%d \t%x\n", BPB_RsvdSecCnt, BPB_RsvdSecCnt);
-
-      //get BPB_NumFATS which starts at 16, size of 1
       printf("BPB_NumFATS: \t\t%d \t%x\n", BPB_NumFATs, BPB_NumFATs);
-
-      //get BPB_FATSz32 which starts at 36, size of 4
       printf("BPB_FATSz32: \t\t%d \t%x\n", BPB_FATSz32, BPB_FATSz32);
    }
 
@@ -314,6 +317,7 @@ void fileStat(char *fn) //10 points
          return;
       }
 
+      // - print out attributes and starting cluster
       printf("File Size: \t\t%d\n", dir[index].DIR_FileSize);
       printf("First Cluster Low: \t%d\n", dir[index].DIR_FirstClusterLow);
       printf("DIR_ATTR: \t\t%d\n", dir[index].DIR_Attr);
@@ -363,8 +367,17 @@ void getFile(char *fn) //15 points
          return;
       }
 
+      // - reading in BPB variables
+      fseek(fp, 11, SEEK_SET);
+      fread(&BPB_BytesPerSec, 2, 1, fp);
+      fseek(fp, 13, SEEK_SET);
+      fread(&BPB_SecPerClus, 1, 1, fp);
+      fseek(fp, 14, SEEK_SET);
+      fread(&BPB_RsvdSecCnt, 2, 1, fp);
       fseek(fp, 16, SEEK_SET);
       fread(&BPB_NumFATs, 1, 1, fp);
+      fseek(fp, 36, SEEK_SET);
+      fread(&BPB_FATSz32, 4, 1, fp);
 
       // - get low cluster number
       int cluster = dir[index].DIR_FirstClusterLow;
@@ -416,6 +429,7 @@ void getFile(char *fn) //15 points
       printf("Error: File system image must be opened first.\n");
    }
 }
+
 
 /*
 This command shall change the current working directory
@@ -498,16 +512,10 @@ volume names.
 */
 void listDir() //10 points
 {
-   //if open, print info
-   //else print that no file is open
+   //if open, list directory
    if(fileOpen)
    {
-      //code
-      // - read the directory data
-      // fseek(fp, 0x100400, SEEK_SET);
-      // - read at beginning of directory
-      // fread( &dir[0], sizeof(struct DirectoryEntry), 16, fp);
-
+      // - go through struct DirectoryEntry and print out valid filenames/directory names
       for(int i=0; i<16; i++)
       {
          // - check if file is read only (0x01), subdirectory (0x10), or archive flag (0x20)
@@ -523,6 +531,8 @@ void listDir() //10 points
          }
       }
    }
+
+   //else print error
    else
    {
       printf("Error: File system image must be opened first.\n");
@@ -537,8 +547,7 @@ the number of bytes specified.
 */
 void readFile(char *fn, char *pos, char *n_b) //10 points
 {
-   //if open, print info
-   //else print that no file is open
+   //if open, read file
    if(fileOpen)
    {
       //check if filename was given
@@ -577,8 +586,10 @@ void readFile(char *fn, char *pos, char *n_b) //10 points
       fseek(fp, 36, SEEK_SET);
       fread(&BPB_FATSz32, 4, 1, fp);
 
+      // - change position and n_bytes parameters to ints
       int position=atoi(pos);
       int n_bytes=atoi(n_b);
+      // - get low cluster of specific filename
       int cluster = dir[index].DIR_FirstClusterLow;
       // - calculate offset
       int offset = LBAtoOffset(cluster);
@@ -592,14 +603,16 @@ void readFile(char *fn, char *pos, char *n_b) //10 points
       // - read info into buffer for number of specified bytes
       fread(buffer, n_bytes, 1, fp);
 
+      // - print out values in buffer for specified number of bytes
       for(int i=0; i<n_bytes; i++)
       {
          printf("%d ", buffer[i]);
       }
-      printf("\n");
+      printf("\n"); // print new line to match sample output
 
    }
 
+   //print error
    else
    {
       printf("Error: File system image must be opened first.\n");
@@ -612,6 +625,7 @@ Deletes the file from the file system
 */
 void deleteFile(char *fn) //10 points
 {
+   //if open, delete file in directory
    if(fileOpen)
    {
       // - get index of dir[] where filename matches
@@ -643,6 +657,8 @@ void deleteFile(char *fn) //10 points
          strcpy(dir[index].DIR_Name, "?");
       }
    }
+
+   //else print error
    else
    {
       printf("Error: File system image must be opened first.\n");
@@ -683,6 +699,8 @@ void restoreFile(char *fn) //10 points
          printf("Error: File not found. \n");
       }
    }
+
+   //else print error
    else
    {
       printf("Error: File system image must be opened first.\n");
@@ -695,10 +713,10 @@ int main()
 
    char * cmd_str = (char*) malloc( MAX_COMMAND_SIZE );
 
-   //int fileOpen = 0; //if 1, file is open; if 0, file is closed
 
    while( 1 )
    {
+      // -------------- GIVEN FROM MFS.C ON GITHUB ------------------------------
       // Print out the mfs prompt
       printf ("mfs> ");
 
@@ -743,7 +761,6 @@ int main()
 
       if(token[0] == NULL)
       {
-         // printf("NULL token[0]\n");
          continue;
       }
 
