@@ -1,3 +1,11 @@
+/*
+   Name: Carolyn Nguyen
+   ID: 1001549627
+
+   Name: Bridget Gregory
+   ID: 1001658617
+
+*/
 
 // The MIT License (MIT)
 //
@@ -573,18 +581,6 @@ void readFile(char *fn, char *pos, char *n_b) //10 points
          printf("Error: File not found.\n");
          return;
       }
-
-      // - reading in BPB variables
-      fseek(fp, 11, SEEK_SET);
-      fread(&BPB_BytesPerSec, 2, 1, fp);
-      fseek(fp, 13, SEEK_SET);
-      fread(&BPB_SecPerClus, 1, 1, fp);
-      fseek(fp, 14, SEEK_SET);
-      fread(&BPB_RsvdSecCnt, 2, 1, fp);
-      fseek(fp, 16, SEEK_SET);
-      fread(&BPB_NumFATs, 1, 1, fp);
-      fseek(fp, 36, SEEK_SET);
-      fread(&BPB_FATSz32, 4, 1, fp);
 
       // - change position and n_bytes parameters to ints
       int position=atoi(pos);
